@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سجل متابعة الحلقة</title>
+    <style>
+        :root {
+            --primary: #10b981;
+            --primary-hover: #059669;
+            --bg: #f3f4f6;
+            --surface: #ffffff;
+            --text: #1f2937;
+            --border: #d1d5db;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-hover);
+        }
+
+        .panel {
+            background: var(--surface);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+
+        /* نماذج الإدخال */
+        .add-student-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .add-student-form input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        /* الجدول الأساسي */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: right;
+            background: var(--surface);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th,
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+
+        tr:hover {
+            background-color: #f9fafb;
+        }
+
+        /* اسم الطالب كزر تفاعلي */
+        .student-name {
+            color: var(--primary-hover);
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: underline;
+            text-decoration-color: transparent;
+            transition: text-decoration-color 0.2s;
+        }
+
+        .student-name:hover {
+            text-decoration-color: var(--primary-hover);
+        }
+
+        .remove-student:hover {
+            cursor: pointer;
+        }
+
+        /* عناصر التقييم (التشيك بوكس والنص) */
+        .metrics-container {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .checkbox-item input {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+
+        .text-input {
+            padding: 5px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            width: 200px;
+        }
+
+        .active-date-badge {
+            background-color: #d1fae5;
+            color: #065f46;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: inline-block;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        /* النافذة المنبثقة (Modal) */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 850px;
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: #ef4444;
+            padding: 5px 15px;
+        }
+
+        .close-btn:hover {
+            background: #dc2626;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>📖 سجل متابعة الطلاب</h1>
+
+        <div class="panel">
+            <form class="add-student-form" id="studentForm">
+                <input type="text" id="studentName" required placeholder="أدخل اسم الطالب الجديد هنا...">
+                <button type="submit">➕ إضافة طالب</button>
+            </form>
+        </div>
+
+        <div class="panel">
+            <h3>الرصد السريع ليوم: <span id="activeDateDisplay" class="active-date-badge"></span></h3>
+            <p style="font-size: 0.85rem; color: #6b7280; margin-top: -10px;">اضغط على اسم الطالب لعرض سجله الكامل لبقية
+                الأيام.</p>
+
+            <table id="mainTable">
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">اسم الطالب</th>
+                        <th>بيانات الأداء والتفاعل</th>
+                        <th>التقييم</th>
+                        <th>حذف الطالب</th>
+                    </tr>
+                </thead>
+                <tbody id="mainTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="studentModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal()">إغلاق ✖</button>
+            <h2 id="modalStudentName" style="color: var(--primary-hover);">سجل الطالب</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">التاريخ</th>
+                        <th>الأداء والتفاعل</th>
+                    </tr>
+                </thead>
+                <tbody id="modalTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="panel">
+        <h3>تصدير واستيراد البيانات</h3>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button onclick="exportData()">
+                📋 نسخ البيانات (JSON)
+            </button>
+
+            <textarea id="importDataText" placeholder="ألصق هنا بيانات JSON للاستيراد..."
+                style="flex:1; min-height:80px; padding:10px;"></textarea>
+
+            <button onclick="importData()">
+                📥 استيراد البيانات
+            </button>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3>🗑️ سلة المحذوفات</h3>
+
+        <button onclick="clearDeletedStudents()" style="background:#dc2626;margin-bottom:10px;">
+            حذف جميع المحذوفين نهائياً
+        </button>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>اسم الطالب</th>
+                    <th>استرجاع</th>
+                    <th>حذف نهائي</th>
+                </tr>
+            </thead>
+
+            <tbody id="deletedStudentsBody">
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // 1. تعريف التواريخ المحددة (صيغة YYYY-MM-DD لتسهيل المقارنة)
+        const scheduleDates = [
+            { key: "2026-06-14", label: "الأحد 14/6" },
+            { key: "2026-06-15", label: "الإثنين 15/6" },
+            { key: "2026-06-17", label: "الأربعاء 17/6" },
+            { key: "2026-06-21", label: "الأحد 21/6" },
+            { key: "2026-06-22", label: "الإثنين 22/6" },
+            { key: "2026-06-24", label: "الأربعاء 24/6" },
+            { key: "2026-06-28", label: "الأحد 28/6" },
+            { key: "2026-06-29", label: "الإثنين 29/6" },
+            { key: "2026-07-01", label: "الأربعاء 1/7" },
+            { key: "2026-07-05", label: "الأحد 5/7" },
+            { key: "2026-07-06", label: "الإثنين 6/7" },
+            { key: "2026-07-08", label: "الأربعاء 8/7" },
+            { key: "2026-07-12", label: "الأحد 12/7" },
+            { key: "2026-07-13", label: "الإثنين 13/7" },
+            { key: "2026-07-15", label: "الأربعاء 15/7" },
+            { key: "2026-07-19", label: "الأحد 19/7" },
+            { key: "2026-07-20", label: "الإثنين 20/7" },
+            { key: "2026-07-22", label: "الأربعاء 22/7" },
+            { key: "2026-07-26", label: "الأحد 26/7" },
+            { key: "2026-07-27", label: "الإثنين 27/7" },
+            { key: "2026-07-29", label: "الأربعاء 29/7" }
+        ];
+
+        // 2. إدارة البيانات في LocalStorage
+        let students = JSON.parse(localStorage.getItem('myStudents')) || [];
+        let records = JSON.parse(localStorage.getItem('studentRecords')) || {};
+        let deletedStudents = JSON.parse(localStorage.getItem('deletedStudents')) || [];
+
+        function saveData() {
+            localStorage.setItem('myStudents', JSON.stringify(students));
+            localStorage.setItem('studentRecords', JSON.stringify(records));
+            localStorage.setItem('deletedStudents', JSON.stringify(deletedStudents));
+        }
+
+        // 3. تحديد "تاريخ اليوم" أو "أقرب تاريخ سابق" لعرضه في الصفحة الرئيسية
+        function getActiveDateObj() {
+            const today = new Date();
+            // نحول تاريخ اليوم لصيغة YYYY-MM-DD
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+            let activeDate = scheduleDates[0]; // افتراضياً أول يوم
+
+            // البحث عن تاريخ اليوم أو أقرب تاريخ سابق له في القائمة
+            for (let i = scheduleDates.length - 1; i >= 0; i--) {
+                if (scheduleDates[i].key <= todayStr) {
+                    activeDate = scheduleDates[i];
+                    break;
+                }
+            }
+            return activeDate;
+        }
+
+        const activeDate = getActiveDateObj();
+        document.getElementById('activeDateDisplay').innerText = activeDate.label;
+
+        // 4. دالة بناء عناصر التقييم (Inputs) لكل يوم
+        function generateMetricsHTML(studentId, dateKey) {
+            const attendanceKey = `${studentId}_${dateKey}_att`;
+            const recitationCheckKey = `${studentId}_${dateKey}_recChk`;
+            const thobeKey = `${studentId}_${dateKey}_thobe`;
+            const recitationTextKey = `${studentId}_${dateKey}_recTxt`;
+
+            // استرجاع القيم المحفوظة إن وُجدت
+            const attVal = records[attendanceKey] ? 'checked' : '';
+            const recChkVal = records[recitationCheckKey] ? 'checked' : '';
+            const thobeVal = records[thobeKey] ? 'checked' : '';
+            const recTxtVal = records[recitationTextKey] || '';
+
+            return `
+            <div class="metrics-container">
+                <label class="checkbox-item">
+                    <input type="checkbox" ${attVal} onchange="updateRecord('${attendanceKey}', this.checked, 'checkbox')">
+                    الحضور
+                </label>
+                <label class="checkbox-item">
+                    <input type="checkbox" ${thobeVal} onchange="updateRecord('${thobeKey}', this.checked, 'checkbox')">
+                    لبس الثوب
+                </label>
+                <label class="checkbox-item">
+                    <input type="checkbox" ${recChkVal} onchange="updateRecord('${recitationCheckKey}', this.checked, 'checkbox')">
+                    التسميع
+                </label>
+                <input type="text" class="text-input" placeholder="مقدار التسميع (نص)..." value="${recTxtVal}" onchange="updateRecord('${recitationTextKey}', this.value, 'text')">
+            </div>
+        `;
+        }
+
+        // 5. حفظ البيانات الفوري عند التعديل
+        function updateRecord(key, value, type) {
+            records[key] = value;
+            saveData();
+        }
+
+        // 6. عرض الجدول الرئيسي (طلاب + تاريخ اليوم)
+        function renderMainTable() {
+            const tbody = document.getElementById('mainTableBody');
+            tbody.innerHTML = '';
+
+            if (students.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="2" style="text-align: center; color: #9ca3af;">لا يوجد طلاب حالياً. أضف طالباً للبدء.</td></tr>`;
+                return;
+            }
+
+            students.forEach(student => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                <td><span class="student-name" onclick="openModal(${student.id}, '${student.name}')">${student.name}</span></td>
+                <td>${generateMetricsHTML(student.id, activeDate.key)}</td>
+                <td>${calculateStudentPoints(student.id)}</td>
+                <td><span class="remove-student" onclick="deleteStudent(${student.id})">❌️</span></td>
+
+            `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 7. عرض الطلاب المحذوفين في سلة المحذوفات وإمكانية حذفهم نهائياً   
+        function renderDeletedStudents() {
+
+            const tbody = document.getElementById('deletedStudentsBody');
+
+            tbody.innerHTML = '';
+
+            if (deletedStudents.length === 0) {
+                tbody.innerHTML = `
+            <tr>
+                <td colspan="3" style="text-align:center;">
+                    لا يوجد طلاب محذوفون
+                </td>
+            </tr>
+        `;
+                return;
+            }
+
+            deletedStudents.forEach(student => {
+
+                const tr = document.createElement('tr');
+
+                tr.innerHTML = `
+            <td>${student.name}</td>
+
+            <td>
+                <button
+                    style="background:#10b981;"
+                    onclick="restoreStudent(${student.id})">
+                    استرجاع
+                </button>
+            </td>
+
+            <td>
+                <button
+                    style="background:#dc2626;"
+                    onclick="deleteStudentForever(${student.id})">
+                    حذف نهائي
+                </button>
+            </td>
+        `;
+
+                tbody.appendChild(tr);
+            });
+        }
+        // 8. حساب نقاط الطالب بناءً على سجله في جميع الأيام 
+        function calculateStudentPoints(studentId) {
+            let total = 0;
+
+            scheduleDates.forEach(dateObj => {
+
+                const attendanceKey = `${studentId}_${dateObj.key}_att`;
+                const thobeKey = `${studentId}_${dateObj.key}_thobe`;
+                const recitationCheckKey = `${studentId}_${dateObj.key}_recChk`;
+
+                if (records[attendanceKey]) total++;
+                if (records[thobeKey]) total++;
+                if (records[recitationCheckKey]) total++;
+            });
+
+            return total;
+        }
+        let pendingDelete = null;
+
+
+        // 9. حذف الطالب مع الاحتفاظ بسجله في سلة المحذوفات 
+        function deleteStudent(studentId) {
+
+            const student = students.find(
+                s => s.id === studentId
+            );
+
+            if (!student) return;
+
+            deletedStudents.push(student);
+
+            students = students.filter(
+                s => s.id !== studentId
+            );
+
+            saveData();
+
+            renderMainTable();
+            renderDeletedStudents();
+        }
+        
+        // 10. حذف الطالب نهائياً مع إزالة سجله بالكامل  
+        function deleteStudentForever(studentId) {
+
+            Object.keys(records).forEach(key => {
+                if (key.startsWith(studentId + "_")) {
+                    delete records[key];
+                }
+            });
+
+            deletedStudents = deletedStudents.filter(
+                s => s.id !== studentId
+            );
+
+            saveData();
+
+            renderDeletedStudents();
+        }
+        
+        // 11. حذف جميع الطلاب المحذوفين نهائياً مع إزالة سجلاتهم بالكامل    
+        function clearDeletedStudents() {
+
+            deletedStudents.forEach(student => {
+
+                Object.keys(records).forEach(key => {
+
+                    if (key.startsWith(student.id + "_")) {
+                        delete records[key];
+                    }
+
+                });
+
+            });
+
+            deletedStudents = [];
+
+            saveData();
+
+            renderDeletedStudents();
+        }
+
+        // 7. إضافة طالب
+        document.getElementById('studentForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const nameInput = document.getElementById('studentName');
+            const newStudent = {
+                id: Date.now(),
+                name: nameInput.value.trim()
+            };
+            students.push(newStudent);
+            saveData();
+            nameInput.value = '';
+            renderMainTable();
+        });
+        function restoreStudent(studentId) {
+
+            const student = deletedStudents.find(
+                s => s.id === studentId
+            );
+
+            if (!student) return;
+
+            students.push(student);
+
+            deletedStudents = deletedStudents.filter(
+                s => s.id !== studentId
+            );
+
+            saveData();
+
+            renderMainTable();
+            renderDeletedStudents();
+        }
+        // 8. التعامل مع النافذة المنبثقة (Modal) لجميع التواريخ
+        function openModal(studentId, studentName) {
+            document.getElementById('modalStudentName').innerText = `سجل الطالب: ${studentName}`;
+            const modalTbody = document.getElementById('modalTableBody');
+            modalTbody.innerHTML = '';
+
+            scheduleDates.forEach(dateObj => {
+                const tr = document.createElement('tr');
+                // تمييز السطر الخاص بتاريخ اليوم بلون مختلف قليلاً
+                if (dateObj.key === activeDate.key) {
+                    tr.style.backgroundColor = '#f0fdf4';
+                }
+                tr.innerHTML = `
+                <td style="font-weight: bold;">${dateObj.label}</td>
+                <td>${generateMetricsHTML(studentId, dateObj.key)}</td>
+            `;
+                modalTbody.appendChild(tr);
+            });
+
+            document.getElementById('studentModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('studentModal').style.display = 'none';
+            // إعادة رسم الجدول الرئيسي لأن البيانات ربما تكون قد تعدلت من داخل الـ Modal
+            renderMainTable();
+        }
+
+        // إغلاق النافذة عند الضغط خارجها
+        window.onclick = function (event) {
+            const modal = document.getElementById('studentModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // التشغيل الأولي
+        renderMainTable();
+        renderDeletedStudents();
+
+
+
+        // 9. تصدير واستيراد البيانات   
+        function exportData() {
+            const exportObject = {
+                students,
+                records
+            };
+            const jsonText = JSON.stringify(exportObject);
+            navigator.clipboard.writeText(jsonText)
+                .then(() => {
+                    alert("تم نسخ البيانات إلى الحافظة بنجاح");
+                })
+                .catch(() => {
+                    alert("تعذر النسخ إلى الحافظة");
+                });
+        }
+
+        function importData() {
+            const jsonText = document
+                .getElementById('importDataText')
+                .value
+                .trim();
+            if (!jsonText) {
+                alert("الرجاء إدخال بيانات JSON");
+                return;
+            }
+            try {
+
+                const imported = JSON.parse(jsonText);
+                if (
+                    !imported.students ||
+                    !Array.isArray(imported.students) ||
+                    !imported.records
+                ) {
+                    throw new Error();
+                }
+                if (!confirm("سيتم استبدال جميع البيانات الحالية. هل تريد المتابعة؟")) {
+                    return;
+                }
+                students = imported.students;
+                records = imported.records;
+
+                saveData();
+                renderMainTable();
+                alert("تم استيراد البيانات بنجاح");
+            } catch (e) {
+                alert("بيانات JSON غير صحيحة");
+            }
+        }
+    </script>
+
+</body>
+
+</html>
