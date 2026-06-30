@@ -259,7 +259,7 @@
 <body>
 
     <div class="container">
-        <h1>📖 سجل متابعة الطلاب</h1>
+        <h1 id="first-heading">📖 سجل متابعة الطلاب</h1>
 
         <div class="panel">
             <form class="add-student-form" id="studentForm">
@@ -336,7 +336,7 @@
     <div class="panel">
         <h3>🗑️ سلة المحذوفات</h3>
 
-        <button onclick="clearDeletedStudents()" style="background:#dc2626;margin-bottom:10px;">
+        <button id="delete-all-button" onclick="clearDeletedStudents()" style="background:#dc2626;margin-bottom:10px;">
             حذف جميع المحذوفين نهائياً
         </button>
 
@@ -390,6 +390,9 @@
             localStorage.setItem('studentRecords', JSON.stringify(records));
             localStorage.setItem('deletedStudents', JSON.stringify(deletedStudents));
         }
+
+        const first_heading = document.getElementById('first-heading');
+        const delete_all_button = document.getElementById('delete-all-button');
 
         // 3. تحديد "تاريخ اليوم" أو "أقرب تاريخ سابق" لعرضه في الصفحة الرئيسية
         function getActiveDateObj() {
@@ -508,6 +511,8 @@
                 <td style="text-align:center;"><span class="remove-student" onclick="deleteStudent(${student.id})">❌️</span></td>
             `;
                 tbody.appendChild(tr);
+                first_heading.textContent = "📖 سجل متابعة الطلاب (" + students.length + ")";
+                delete_all_button.textContent = "حذف جميع المحذوفين نهائياً (" + deletedStudents.length + ")";
             });
         }
 
